@@ -1,73 +1,40 @@
 ## _ViTAMINS_: An Empirical Study of Training Self-Supervised Vision Transformers with Synthetic Hard Negatives
 
-<div align="center">
-  <img width="1000" height="376" alt="image" src="https://i.postimg.cc/xj6Dvq0j/teaser-vitamins.png" />
-</div>
+Official PyTorch implementation of **ViTAMINS**, a self-supervised learning method that integrates **synthetic hard negatives** into contrastive pretraining of vision transformers. Instead of relying only on the negatives available in the memory queue, ViTAMINS synthesizes harder negatives on-the-fly in representation space, using geometric, stochastic and adversarial perturbations of the hardest existing ones. This sharpens the contrastive task at **negligible extra cost**, without multi-crop augmentation or pixel-level reconstruction, and works with both ViT and Swin backbones. [BYOL](https://arxiv.org/abs/2006.07733), [MoBY](https://arxiv.org/abs/2105.04553) and [DINO](https://arxiv.org/abs/2104.14294) are trained and evaluated alongside ViTAMINS throughout this repository as baselines, using matched backbones, augmentations and training schedules.
 
-This is a PyTorch implementation of the [ViTAMINS paper](https://arxiv.org/abs/TO.DO), accepted at **WACV 2027**:
-```
-@misc{giakoumoglou2026vitamins,
-      title={{ViTAMINS}: An Empirical Study of Training Self-Supervised Vision Transformers with Synthetic Hard Negatives}, 
-      author={Nikos Giakoumoglou and Andreas Floros and Kleanthis-Marios Papadopoulos and Tania Stathaki},
-      year={2026},
-      eprint={2609.01041},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2609.01041}, 
-}
-```
+> **ViTAMINS: An Empirical Study of Training Self-Supervised Vision Transformers with Synthetic Hard Negatives**  
+> Nikos Giakoumoglou, Andreas Floros, Kleanthis-Marios Papadopoulos, Tania Stathaki — **WACV 2027**  
+> [Paper](https://arxiv.org/pdf/2609.01041)
+---
 
-It also contains the implementation of [BYOL](https://arxiv.org/abs/2006.07733), [MoBY](https://arxiv.org/abs/2105.04553) and [DINO](https://arxiv.org/abs/2104.14294).
+## Overview
 
+ViTAMINS integrates synthetic hard negatives into contrastive self-supervised pretraining of vision transformers. Hard negatives are synthesized on-the-fly in the embedding space with six strategies that span the canonical perturbation families: geometric, stochastic and adversarial. The method requires only simple modifications to existing contrastive frameworks, adds negligible overhead, and applies to both ViT and Swin backbones.
 
-## Preparation
+## Evaluation
 
-Install PyTorch and ImageNet dataset following the [official PyTorch ImageNet training code](https://github.com/pytorch/examples/tree/master/imagenet).
+ViTAMINS consistently learns stronger representations than contrastive, self-distillation, generative and JEPA baselines under matched architectures, without relying on multi-crop augmentation. The synthetic hard negatives add negligible overhead over standard contrastive training, yet ViTAMINS reaches the accuracy of much larger models: our ViT-B reaches 77.1% top-1 in 300 epochs, surpassing V-JEPA with ViT-L and matching LeJEPA with ViT-H at 7.3× fewer parameters. The learned features also serve as strong nearest-neighbour classifiers, improving k-NN accuracy by up to +11.3% over reproduced baselines.
 
-The scripts expect the following dataset structure:
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/ad46d405-4c8d-4852-98f2-b8cdf9b8f800" alt="Params vs Top1" width="700">
+</p>
 
-```
-[your imagenet-folder with train and val folders]/
-├── train/
-│   ├── class1/
-│   ├── class2/
-│   └── ...
-└── val/
-    ├── class1/
-    ├── class2/
-    └── ...
-```
+The gains carry over to the more challenging dense prediction task. ViTAMINS achieves the best object detection and instance segmentation results on COCO and the best semantic segmentation on ADE20K among all compared models.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/b06f9e6f-a48a-4589-aad7-121802f5775a" alt="Dense transfer" width="700">
+</p>
 
 
-## Code Structure
+## Visualization
 
-```
-.
-├── main_pretrain.py            # entrypoint: unsupervised pre-training
-├── main_linear.py              # entrypoint: linear probing / fine-tuning
-├── configs/                    # one folder per method, one file per architecture
-│   ├── byol/                   # swin_tiny, swin_small, swin_base, vit_small, vit_base
-│   ├── moby/                   # swin_tiny, swin_small, swin_base, vit_small, vit_base
-│   ├── dino/                   # swin_tiny, swin_small, swin_base, vit_small, vit_base
-│   └── vitamins/               # swin_tiny, swin_small, swin_base, vit_small, vit_base
-├── scripts/                    # PBS job scripts, one folder per method
-│   ├── byol/ moby/ dino/ vitamins/    …/{swin_tiny,swin_small,swin_base,vit_small,vit_base}.pbs
-│   └── extract_ILSVRC2012.sh
-└── src/
-    ├── config.py               # default config and yaml merging
-    ├── logger.py
-    ├── lr_scheduler.py
-    ├── optimizer.py
-    ├── utils.py
-    ├── datasets/               # data loading, ssl augmentations, transfer datasets
-    └── models/
-        ├── build.py            # model factory
-        ├── byol.py
-        ├── moby.py
-        ├── dino.py
-        ├── vitamins.py
-        └── backbones/          # vision transformer and swin transformer
-```
+We visualize the learned patch representations using PCA on ViTAMINS encoder features. Without any labels, the features recover coherent object and background structures with clear object boundaries, suggesting that synthetic hard negatives encourage semantically structured representations.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/43b018ca-d1a7-4be1-89c0-8cc295c53e8d" alt="PCA" width="700">
+</p>
+
+---
 
 ## Environment Setup
 
@@ -88,7 +55,7 @@ pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 --extra-index-url http
 pip install timm==0.4.9 diffdist Pillow pyyaml yacs termcolor scipy numpy==1.21.5 opencv-python tqdm
 ```
 
-## Unsupervised Training
+## Unsupervised Pretraining
 
 To do unsupervised pre-training of a ViT-Base model on ImageNet in an 8-gpu machine, run:
 
@@ -142,6 +109,8 @@ To evaluate on downstream datasets (CIFAR-10, CIFAR-100, STL-10, Oxford Flowers1
 
 Use the evaluation scripts from the official [DINO repository](https://github.com/facebookresearch/dino).
 
+---
+
 ### License
 
 This project is under the MIT license. See [LICENSE](LICENSE) for details.
@@ -149,3 +118,19 @@ This project is under the MIT license. See [LICENSE](LICENSE) for details.
 ### Acknowledgments
 
 This codebase is built upon [MoBY](https://github.com/SwinTransformer/TransformerSSL), [SynCo](https://github.com/giakoumoglou/synco), [DINO](https://github.com/facebookresearch/dino), [Swin Transformer](https://github.com/microsoft/Swin-Transformer). We thank the authors for their excellent work and for making their code publicly available.
+
+## Citation
+
+If you find this repository useful, please consider giving it a star ⭐ and citing our paper:
+
+```bibtex
+@misc{giakoumoglou2026vitamins,
+      title={{ViTAMINS}: An Empirical Study of Training Self-Supervised Vision Transformers with Synthetic Hard Negatives}, 
+      author={Nikos Giakoumoglou and Andreas Floros and Kleanthis-Marios Papadopoulos and Tania Stathaki},
+      year={2026},
+      eprint={2609.01041},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2609.01041}, 
+}
+```
