@@ -19,6 +19,10 @@ ViTAMINS consistently learns stronger representations than contrastive, self-dis
   <img src="https://github.com/user-attachments/assets/ad46d405-4c8d-4852-98f2-b8cdf9b8f800" alt="Params vs Top1" width="700">
 </p>
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/e3ac9fc6-c9ed-4536-8c32-b4cf9d9319e4" alt="Params vs Top1" width="700">
+</p>
+
 The gains carry over to the more challenging dense prediction task. ViTAMINS achieves the best object detection and instance segmentation results on COCO and the best semantic segmentation on ADE20K among all compared models.
 
 <p align="center">
