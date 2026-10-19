@@ -37,7 +37,7 @@ The gains carry over to the more challenging dense prediction task. ViTAMINS ach
 We visualize the learned patch representations using PCA on ViTAMINS encoder features. Without any labels, the features recover coherent object and background structures with clear object boundaries, suggesting that synthetic hard negatives encourage semantically structured representations.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/43b018ca-d1a7-4be1-89c0-8cc295c53e8d" alt="PCA" width="700">
+  <img src="https://github.com/user-attachments/assets/43b018ca-d1a7-4be1-89c0-8cc295c53e8d" alt="PCA" width="1100">
 </p>
 
 ---
