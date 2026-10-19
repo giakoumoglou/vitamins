@@ -15,12 +15,14 @@ ViTAMINS integrates synthetic hard negatives into contrastive self-supervised pr
 
 ViTAMINS consistently learns stronger representations than contrastive, self-distillation, generative and JEPA baselines under matched architectures, without relying on multi-crop augmentation. The synthetic hard negatives add negligible overhead over standard contrastive training, yet ViTAMINS reaches the accuracy of much larger models: our ViT-B reaches 77.1% top-1 in 300 epochs, surpassing V-JEPA with ViT-L and matching LeJEPA with ViT-H at 7.3× fewer parameters. The learned features also serve as strong nearest-neighbour classifiers, improving k-NN accuracy by up to +11.3% over reproduced baselines.
 
+<!--
 <p align="center">
   <img src="https://github.com/user-attachments/assets/ad46d405-4c8d-4852-98f2-b8cdf9b8f800" alt="Params vs Top1" width="700">
 </p>
+-->
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e3ac9fc6-c9ed-4536-8c32-b4cf9d9319e4" alt="Params vs Top1" width="1100">
+  <img src="https://github.com/user-attachments/assets/e3ac9fc6-c9ed-4536-8c32-b4cf9d9319e4" alt="ImageNet linear" width="1100">
 </p>
 
 The gains carry over to the more challenging dense prediction task. ViTAMINS achieves the best object detection and instance segmentation results on COCO and the best semantic segmentation on ADE20K among all compared models.
