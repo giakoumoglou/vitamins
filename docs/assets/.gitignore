@@ -1,0 +1,5 @@
+*.py
+*.svg
+*.csv
+README.md
+.DS_Store

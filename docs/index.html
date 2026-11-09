@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViTAMINS: An Empirical Study of Training Self-Supervised Vision Transformers with Synthetic Hard Negatives</title>
+<meta name="description" content="ViTAMINS integrates synthetic hard negatives into contrastive self-supervised pretraining of vision transformers, synthesized &quot;on-the-fly&quot; in representation space via geometric, stochastic and adversarial perturbations.">
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#ffffff;
+  --surface:#ffffff;
+  --ink:#121a1f;
+  --ink-soft:#404d54;
+  --ink-faint:#7c8990;
+  --rule:#e1edf2;
+  --blue:#00a8da;
+  --blue-deep:#0a6e8f;
+  --blue-soft:#4acfff;
+  --blue-wash:#e8f8fe;
+  --blue-wash2:#cdeefb;
+  --c-ours:#3662b2;
+  --c-byol:#b7bcc4;
+  --c-moby:#d98e5b;
+  --c-dino:#7fa98a;
+  --orange:#ff6242;
+  --radius:10px;
+  --maxw:860px;
+  --shadow:0 1px 2px rgba(18,26,31,0.04), 0 10px 26px -16px rgba(18,26,31,0.14);
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'STIX Two Text', 'Source Serif 4', Georgia, serif;
+  line-height:1.68;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:var(--blue-wash); color:var(--ink); }
+
+.wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+
+h1,h2,h3{ font-family:'STIX Two Text', Georgia, serif; font-weight:600; color:var(--ink); letter-spacing:-0.005em; }
+p{ color:var(--ink-soft); text-align:justify; hyphens:auto; }
+a{ color:var(--blue); text-decoration:none; }
+a:hover{ text-decoration:underline; }
+.sans{ font-family:'Inter',system-ui,sans-serif; }
+code, .mono{ font-family:'JetBrains Mono', monospace; }
+mjx-container{ color:inherit !important; }
+
+/* ---------- Header / Hero ---------- */
+header.hero{ padding:64px 0 36px; text-align:center; }
+.paper-logo{ width:96px; height:auto; margin:0 auto 20px; display:block; }
+h1.title{
+  font-size:clamp(21px, 2.7vw, 27px);
+  line-height:1.5;
+  margin:0 auto 22px;
+  max-width:none;
+  font-weight:700;
+}
+.model-name{ white-space:nowrap; }
+.model-name .vit{ color:var(--blue); }
+.model-name .amins{ color:var(--orange); }
+
+.authors{ font-family:'Inter',sans-serif; font-size:16px; color:var(--ink); margin-bottom:8px; }
+.authors .you{ color:var(--blue); font-weight:600; }
+.affils{ font-family:'Inter',sans-serif; font-size:13.5px; color:var(--ink-faint); margin-bottom:30px; }
+
+.links-row{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; font-family:'Inter',sans-serif;}
+.pill-link{
+  display:inline-flex; align-items:center; gap:7px;
+  padding:9px 18px; border-radius:999px;
+  border:1px solid var(--rule); background:var(--surface); color:var(--ink);
+  font-size:13.5px; font-weight:500; box-shadow:var(--shadow);
+  transition:transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.pill-link:hover{ transform:translateY(-1px); border-color:var(--blue-soft); background:var(--blue-wash); text-decoration:none; color:var(--blue-deep); }
+.pill-link svg{ width:14.5px; height:14.5px; flex:none; }
+
+/* ---------- section nav ---------- */
+.section-nav{
+  position:sticky; top:0; z-index:40;
+  display:flex; gap:4px; overflow-x:auto;
+  justify-content:center;
+  padding:12px 24px;
+  background:rgba(255,255,255,0.92);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--rule);
+  scrollbar-width:none;
+}
+.section-nav::-webkit-scrollbar{ display:none; }
+.section-nav a{
+  flex:0 0 auto; font-family:'Inter',sans-serif; font-size:12.5px; font-weight:500;
+  color:var(--ink-faint); padding:6px 13px; border-radius:999px;
+  border:1px solid transparent; white-space:nowrap;
+}
+.section-nav a:hover{ color:var(--blue); text-decoration:none; }
+.section-nav a.active{ color:var(--blue); background:var(--blue-wash); border-color:var(--blue-soft); font-weight:600; }
+
+/* ---------- Sections ---------- */
+section{ padding:50px 0; border-top:1px solid var(--rule); }
+.section-label{
+  font-family:'JetBrains Mono', monospace; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--blue); margin:0 0 10px;
+}
+h2.section-title{ font-size:24px; margin:0 0 20px; }
+h3.sub-title{ font-size:16.5px; margin:28px 0 10px; color:var(--ink); }
+.lede{ font-size:16.5px; }
+
+.card{ background:var(--surface); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow); }
+.abstract-card{ padding:26px 30px; }
+.abstract-card p{ margin:0; font-size:16px; text-align:justify; }
+
+.def-block{ margin:22px 0; padding:20px 22px; border:1px solid var(--rule); border-radius:8px; background:var(--surface); position:relative; }
+.def-block .def-label{
+  position:absolute; top:-11px; left:16px; background:var(--bg); padding:0 8px;
+  font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; color:var(--blue); text-transform:uppercase;
+}
+.def-block mjx-container{ color:var(--ink) !important; max-width:100%; }
+.def-block mjx-container[display="true"]{ overflow-x:auto; overflow-y:hidden; padding:2px 2px 8px; }
+.eq-note{ font-size:13.5px; color:var(--ink-faint); margin-top:10px; text-align:left; font-family:'Inter',sans-serif; }
+
+.motive-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; margin-top:24px; }
+.motive-card{ padding:20px 20px 22px; }
+.motive-card .k{ font-size:11.5px; font-family:'JetBrains Mono',monospace; color:var(--blue-soft); margin-bottom:8px; }
+.motive-card h4{ margin:0 0 8px; font-size:15.5px; font-family:'STIX Two Text',serif; }
+.motive-card p{ margin:0; font-size:14px; text-align:left; }
+.takeaway-box{
+  margin-top:22px; padding:18px 20px;
+  border-left:3px solid var(--c-ours);
+  background:var(--blue-wash);
+  border-radius:0 8px 8px 0;
+  font-size:14.5px;
+  text-align:left;
+}
+.takeaway-box .tk-label{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--c-ours); font-weight:600; }
+.takeaway-box p{ margin:8px 0 0; text-align:left; }
+.takeaway-box b{ color:var(--ink); }
+
+.stat-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:26px 0 6px; font-family:'Inter',sans-serif;}
+.stat{ padding:16px 16px; text-align:left; }
+.stat .num{ font-family:'STIX Two Text',serif; font-size:25px; color:var(--c-ours); font-weight:700; }
+.stat .lab{ font-size:12.5px; color:var(--ink-faint); margin-top:4px; }
+
+.fig-card{ margin-top:26px; padding:18px; }
+.fig-card img{ max-width:100%; border-radius:6px; background:#fff; display:block; margin:0 auto; }
+.ssl-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; align-items:end; }
+.ssl-grid figure{ margin:0; text-align:center; }
+.ssl-grid img{ width:100%; border-radius:6px; }
+.ssl-grid figcaption{ margin-top:8px; font-family:'Inter',sans-serif; font-size:12px; color:var(--ink-soft); line-height:1.4; }
+.ssl-grid figcaption i{ color:var(--ink-faint); font-style:italic; }
+@media (max-width:640px){ .ssl-grid{ grid-template-columns:repeat(2,1fr); } }
+
+.method-row-wrap{ padding:20px; margin-top:4px; }
+.method-row{ display:flex; gap:8px; align-items:flex-start; overflow-x:auto; padding-bottom:4px; }
+.method-row .cell{ flex:1 1 0; min-width:92px; text-align:center; }
+.method-row img{ width:100%; border-radius:6px; cursor:zoom-in; background:#fff; }
+.method-row img:hover{ outline:2px solid var(--blue-soft); outline-offset:-2px; }
+.method-row .lab{ font-size:10.5px; color:var(--ink-faint); margin-top:4px; font-family:'Inter',sans-serif; line-height:1.3; }
+.method-row .grp-sep{ flex:0 0 auto; width:1px; background:var(--rule); align-self:stretch; margin:0 4px; }
+
+/* native bar charts */
+.chart-panels{ display:grid; grid-template-columns:repeat(2,1fr); gap:28px; }
+.chart-panels.three{ grid-template-columns:repeat(3,1fr); }
+.chart-panels.four{ grid-template-columns:repeat(4,1fr); gap:16px; }
+.bars-row.single .bar{ width:30px; }
+.chart-panel{ text-align:center; }
+.chart-title{ font-family:'Inter',sans-serif; font-weight:700; font-size:14px; color:var(--blue-deep); margin-bottom:6px; }
+.chart-legend{ display:flex; justify-content:center; flex-wrap:wrap; gap:12px; font-family:'Inter',sans-serif; font-size:11px; color:var(--ink-soft); margin-bottom:14px; }
+.chart-legend span{ display:inline-flex; align-items:center; gap:5px; }
+.chart-legend i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+.bars-row{ display:flex; gap:22px; justify-content:center; align-items:flex-end; height:190px; border-bottom:1.5px solid var(--ink); padding:0 6px; }
+.bar-group{ display:flex; gap:3px; align-items:flex-end; height:100%; padding:0 2px; border-radius:6px; }
+.bar-group.ours{ background:var(--blue-wash); }
+.bar{ width:22px; position:relative; border-radius:3px 3px 0 0; }
+.bar .val{ position:absolute; left:50%; top:-17px; transform:translateX(-50%); font-size:10.5px; font-family:'Inter',sans-serif; color:var(--ink-soft); white-space:nowrap; }
+.bar-cats{ display:flex; gap:22px; justify-content:center; margin-top:8px; }
+.bar-cat-label{ width:fit-content; flex:0 0 auto; text-align:center; font-size:11px; font-family:'Inter',sans-serif; color:var(--ink-faint); }
+@media (max-width:640px){ .chart-panels, .chart-panels.three, .chart-panels.four{ grid-template-columns:1fr; } }
+@media (min-width:641px) and (max-width:880px){ .chart-panels.four{ grid-template-columns:repeat(2,1fr); } }
+.fig-caption{ font-size:13.5px; color:var(--ink-faint); margin-top:14px; line-height:1.55; font-family:'Inter',sans-serif; text-align:left;}
+.fig-caption b{ color:var(--ink-soft); }
+
+/* selector */
+.unc-nav{ display:flex; gap:8px; margin:22px 0 18px; flex-wrap:wrap; justify-content:center; }
+.unc-thumb{ width:56px; height:56px; border-radius:7px; overflow:hidden; cursor:pointer; border:2px solid var(--rule); opacity:.55; transition:opacity .15s, border-color .15s; }
+.unc-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+.unc-thumb.active{ opacity:1; border-color:var(--blue); }
+.unc-display{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.unc-display figure{ margin:0; }
+.unc-display img{ width:100%; border-radius:7px; background:#fff; display:block; cursor:zoom-in; }
+.unc-display img:hover{ outline:2px solid var(--blue-soft); outline-offset:-2px; }
+.unc-display figcaption{ text-align:center; font-size:12px; color:var(--ink-faint); margin-top:6px; font-family:'Inter',sans-serif; }
+
+.limits-list{ margin:18px 0 0; padding-left:0; list-style:none; }
+.limits-list li{ display:flex; gap:12px; margin-bottom:12px; font-size:14.5px; color:var(--ink-soft); text-align:left;}
+.limits-list .tag{ flex:0 0 auto; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--blue); border:1px solid var(--blue-soft); border-radius:5px; padding:2px 7px; height:fit-content; }
+
+.bib-card{ position:relative; margin-top:20px; }
+.bib-card pre{ margin:0; padding:24px 26px; overflow-x:auto; font-family:'JetBrains Mono',monospace; font-size:12.8px; line-height:1.7; color:var(--ink-soft); }
+.bib-card .copy-btn{ position:absolute; top:14px; right:14px; font-family:'Inter',sans-serif; font-size:12.5px; font-weight:500; padding:6px 12px; border-radius:6px; border:1px solid var(--rule); background:#fff; color:var(--ink-soft); cursor:pointer; }
+.bib-card .copy-btn:hover{ color:var(--blue); border-color:var(--blue-soft); }
+.bib-card .copy-btn.copied{ color:#1a8a4e; border-color:#1a8a4e; }
+
+.lightbox{ position:fixed; inset:0; background:rgba(8,18,22,.9); display:none; align-items:center; justify-content:center; z-index:100; padding:30px; cursor:zoom-out;}
+.lightbox.open{ display:flex; }
+.lightbox img{ max-width:min(92vw,960px); max-height:88vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+
+@media (max-width:640px){
+  header.hero{ padding:52px 0 30px; } section{ padding:38px 0; } p{ text-align:left; }
+  .unc-display{ grid-template-columns:repeat(3,1fr); gap:6px; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="paper-logo" src="assets/logo/vitamin.png" alt="ViTAMINS vitamin capsule logo">
+    <h1 class="title"><span class="model-name"><span class="vit">ViT</span><span class="amins">AMINS</span></span>: An Empirical Study of Training Self-Supervised<br>Vision Transformers with Synthetic Hard Negatives</h1>
+
+    <div class="authors">
+      <span class="you">Nikos Giakoumoglou</span> &nbsp;&middot;&nbsp;
+      <span>Andreas Floros</span> &nbsp;&middot;&nbsp;
+      <span>Kleanthis-Marios Papadopoulos</span> &nbsp;&middot;&nbsp;
+      <span>Tania Stathaki</span>
+    </div>
+    <div class="affils">Imperial College London</div>
+
+    <div class="links-row">
+      <a class="pill-link" href="https://arxiv.org/abs/2609.01041" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.8423 0a1.0037 1.0037 0 0 0-.922.6078c-.1536.3687-.0438.6275.2938 1.1113l6.9185 8.3597-1.0223 1.1058a1.0393 1.0393 0 0 0 .003 1.4229l1.2292 1.3135-5.4391 6.4444c-.2803.299-.4538.823-.2971 1.1986a1.0253 1.0253 0 0 0 .9585.635.9133.9133 0 0 0 .6891-.3405l5.783-6.126 7.4902 8.0051a.8527.8527 0 0 0 .6835.2597.9575.9575 0 0 0 .8777-.6138c.1577-.377-.017-.7502-.306-1.1407l-7.0518-8.3418 1.0632-1.13a.9626.9626 0 0 0 .0089-1.3165L4.6336.4639s-.3733-.4535-.768-.463zm0 .272h.0166c.2179.0052.4874.2715.5644.3639l.005.006.0052.0055 10.169 10.9905a.6915.6915 0 0 1-.0072.945l-1.0666 1.133-1.4982-1.7724-8.5994-10.39c-.3286-.472-.352-.6183-.2592-.841a.7307.7307 0 0 1 .6704-.4401Zm14.341 1.5701a.877.877 0 0 0-.6554.2418l-5.6962 6.1584 1.6944 1.8319 5.3089-6.5138c.3251-.4335.479-.6603.3247-1.0292a1.1205 1.1205 0 0 0-.9763-.689zm-7.6557 12.2823 1.3186 1.4135-5.7864 6.1295a.6494.6494 0 0 1-.4959.26.7516.7516 0 0 1-.706-.4669c-.1119-.2682.0359-.6864.2442-.9083l.0051-.0055.0047-.0055z"/></svg>
+        arXiv
+      </a>
+      <a class="pill-link" href="https://github.com/giakoumoglou/vitamins" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.74.5 12.03c0 5.03 3.26 9.29 7.79 10.8.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.17.69-3.84-1.35-3.84-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.25 3.33.95.1-.74.4-1.25.72-1.54-2.53-.29-5.19-1.27-5.19-5.63 0-1.24.44-2.26 1.17-3.06-.12-.29-.51-1.45.11-3.02 0 0 .96-.31 3.14 1.17a10.8 10.8 0 0 1 5.72 0c2.18-1.48 3.14-1.17 3.14-1.17.62 1.57.23 2.73.11 3.02.73.8 1.17 1.82 1.17 3.06 0 4.37-2.67 5.33-5.21 5.62.41.35.78 1.04.78 2.1 0 1.52-.01 2.74-.01 3.11 0 .3.2.66.79.55A10.53 10.53 0 0 0 23.5 12.03C23.5 5.74 18.27.5 12 .5z"/></svg>
+        Code
+      </a>
+      <a class="pill-link" href="#bibtex">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        BibTeX
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="section-nav" id="sectionNav">
+  <a href="#abstract">Abstract</a>
+  <a href="#motivation">Motivation</a>
+  <a href="#method">Method</a>
+  <a href="#results">Results</a>
+  <a href="#conclusion">Conclusion</a>
+  <a href="#bibtex">BibTeX</a>
+</nav>
+
+<main>
+
+<section id="overview">
+  <div class="wrap">
+    <p class="section-label">Overview</p>
+    <h2 class="section-title">TL;DR</h2>
+    <p class="lede">ViTAMINS integrates <b style="color:var(--ink)">synthetic hard negatives</b> into contrastive self-supervised pretraining of vision transformers. Instead of relying only on whatever negatives sit in the memory queue, ViTAMINS synthesizes harder negatives "on-the-fly" in representation space, using geometric, stochastic, and adversarial perturbations of the hardest existing ones, at negligible extra cost, with no multi-crop augmentation or pixel-level reconstruction.</p>
+  </div>
+</section>
+
+<section id="abstract">
+  <div class="wrap">
+    <p class="section-label">Abstract</p>
+    <div class="card abstract-card">
+      <p>
+      We introduce <span class="model-name"><span class="vit">ViT</span><span class="amins">AMINS</span></span>, a method that integrates synthetic hard negatives into unsupervised vision transformer pretraining to improve representation quality. Our approach is thoroughly benchmarked on ImageNet and transfer learning, image retrieval, copy detection, and image, video segmentation tasks. Notably, our proposed negatives give rise to <i>emergent properties</i>, where learned representations contain explicit information about the semantic content of an image and serve as excellent classifiers (up to +11.3% over baselines). <span class="model-name"><span class="vit">ViT</span><span class="amins">AMINS</span></span> achieves these benefits through simple modifications to existing contrastive frameworks and outperforms competing methods while being more resource efficient, e.g., our ViT-B surpasses V-JEPA with ViT-L. Our findings motivate reconsidering contrastive learning as a simpler yet powerful alternative to dominant generative and self-distillation approaches.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="motivation">
+  <div class="wrap">
+    <p class="section-label">Motivation</p>
+    <h2 class="section-title">Three ways to avoid collapse, and a fourth lever</h2>
+    <p class="lede">Joint-embedding methods for vision transformers fall into three families, each using a different trick to avoid representational collapse: <b>contrastive learning</b> embeds augmented views into a joint space, pulling same-instance pairs together while pushing different instances apart; <b>self-distillation</b> trains a student to match a teacher's embeddings without negatives at all; and <b>clustering-based</b> methods use a clustering objective instead. ViTAMINS stays inside the first family, but pulls on a lever the others don't have: the <i>quality</i> of the negatives themselves.</p>
+
+    <div class="fig-card card">
+      <div class="ssl-grid">
+        <figure><img src="assets/methods/moby.png" alt="MoBY contrastive learning schematic"><figcaption><b>MoBY</b><br><i>Contrastive</i></figcaption></figure>
+        <figure><img src="assets/methods/dino.png" alt="DINO self-distillation schematic"><figcaption><b>DINO</b><br><i>Self-distillation</i></figcaption></figure>
+        <figure><img src="assets/methods/byol.png" alt="BYOL self-distillation schematic"><figcaption><b>BYOL</b><br><i>Self-distillation</i></figcaption></figure>
+        <figure><img src="assets/methods/smog.png" alt="SMoG clustering schematic"><figcaption><b>SMoG</b><br><i>Clustering</i></figcaption></figure>
+        <figure><img src="assets/methods/vitamins.png" alt="ViTAMINS schematic with synthetic hard negatives"><figcaption><b>ViTAMINS</b><br><i>Ours</i></figcaption></figure>
+      </div>
+      <p class="fig-caption">Self-supervised learning categories for vision transformers, and where ViTAMINS fits. <b>Contrastive</b> (MoBY) maximizes similarity between same-instance embeddings while minimizing similarity across others; <b>self-distillation</b> (DINO, BYOL) trains a student to match a teacher without explicit negatives; <b>clustering</b> (SMoG) assigns pseudo-labels online. ViTAMINS stays inside the contrastive family, but synthesizes harder negatives "on-the-fly", directly sharpening the discrimination task the encoder has to solve.</p>
+    </div>
+
+    <div class="motive-grid">
+      <div class="card motive-card">
+        <div class="k">queue negatives</div>
+        <h4>What's already there</h4>
+        <p>Standard contrastive frameworks draw negatives from whatever happens to sit in the memory queue, hard or easy.</p>
+      </div>
+      <div class="card motive-card">
+        <div class="k">synthetic negatives</div>
+        <h4>Create harder ones</h4>
+        <p>ViTAMINS identifies the hardest existing negatives, then synthesizes even harder ones "on-the-fly" via six perturbation strategies.</p>
+      </div>
+      <div class="card motive-card">
+        <div class="k">negligible cost</div>
+        <h4>No extra views needed</h4>
+        <p>No multi-crop augmentation, no pixel reconstruction, no second forward pass through the backbone, just representation-space arithmetic.</p>
+      </div>
+    </div>
+
+    <h3 class="sub-title">Why a harder task helps</h3>
+    <p>We deliberately replace purely random queue negatives with synthetic hard negatives drawn from the hardest samples already in the queue. We don't change the architecture: we operate directly in representation space and synthesize negatives close to the decision boundary. That alone makes the discrimination task the encoder has to solve substantially harder, and our central empirical finding is that this harder task is exactly what pushes the model toward more discriminative, semantically structured representations, the <i>emergent properties</i> we measure in Results below.</p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <p class="section-label">Method</p>
+    <h2 class="section-title">Synthesizing hard negatives "on-the-fly"</h2>
+    <p class="lede">Given an image \(\mathbf{x}\), two augmented views \(\mathbf{x}_q = t_q(\mathbf{x})\) and \(\mathbf{x}_k = t_k(\mathbf{x})\) are encoded by an online branch \(f_\theta, g_\theta, h_\theta\) and a momentum target branch \(f_\xi, g_\xi\), producing \(\ell_2\)-normalized embeddings \(\mathbf{q}\) and \(\mathbf{k}\). A memory queue holds \(K{=}4096\) negative embeddings \(\mathbf{n} \in \mathcal{Q}\) from past steps.</p>
+
+    <div class="def-block">
+      <span class="def-label">Query and key</span>
+      \[ \mathbf{q} = h_\theta\big(g_\theta(f_\theta(\mathbf{x}_q))\big), \qquad \mathbf{k} = g_\xi\big(f_\xi(\mathbf{x}_k)\big) \]
+      <p class="eq-note">The online branch alone carries a predictor \(h_\theta\) on top of its encoder \(f_\theta\) and projector \(g_\theta\); the momentum branch stops at the projector. Only \(\theta\) receives gradients, with \(\xi \leftarrow m\xi + (1-m)\theta\) updated by exponential moving average, so \(\mathbf{k}\) evolves slowly and stably across steps.</p>
+    </div>
+
+    <h3 class="sub-title">Six ways to synthesize a harder negative</h3>
+    <p>Negatives are ranked by their similarity to the query, \(\ell(\mathbf{n}_i) = \mathbf{q}^\top \mathbf{n}_i\), and the top-\(N\) hardest, \(\hat{\mathcal{Q}}^N\), are selected. Six transformation strategies then generate synthetic negatives \(\mathbf{s}_k^i\) from this hard set:</p>
+    <div class="def-block">
+      <span class="def-label">Synthetic strategies</span>
+      \[ \mathbf{s}_k^i = \begin{cases}
+      \alpha_k \mathbf{q} + (1-\alpha_k)\mathbf{n}_j, & i{=}1 \ \text{(interpolated)} \\
+      \mathbf{n}_j + \beta_k (\mathbf{n}_j - \mathbf{q}), & i{=}2 \ \text{(extrapolated)} \\
+      \gamma_k \mathbf{n}_j + (1-\gamma_k)\mathbf{n}_l, & i{=}3 \ \text{(mixup)} \\
+      \mathbf{n}_j + \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I}), & i{=}4 \ \text{(noise)} \\
+      \mathbf{n}_j + \delta \cdot \nabla_{\mathbf{n}_j}\mathrm{sim}(\mathbf{q},\mathbf{n}_j), & i{=}5 \ \text{(gradient)} \\
+      \mathbf{n}_j + \eta \cdot \mathrm{sign}(\nabla_{\mathbf{n}_j}\mathrm{sim}(\mathbf{q},\mathbf{n}_j)), & i{=}6 \ \text{(adversarial)}
+      \end{cases} \]
+      <p class="eq-note">Interpolated and extrapolated negatives move along the query&ndash;negative axis; mixup blends two hard negatives; noise, gradient, and sign-based perturbations probe the local geometry around a hard negative. All synthetic negatives are re-normalized to stay on the embedding sphere.</p>
+    </div>
+
+    <h3 class="sub-title">Training objective</h3>
+    <p>The synthetic set \(\mathcal{S} = \bigcup_{i=1}^{6} S^i\) augments the queue negatives inside a standard InfoNCE denominator:</p>
+    <div class="def-block">
+      <span class="def-label">ViTAMINS loss</span>
+      \[ \mathcal{L}(\mathbf{q},\mathbf{k},\mathcal{Q},\mathcal{S}) = -\log \frac{\exp(\mathbf{q}^\top \mathbf{k} / \tau)}{\exp(\mathbf{q}^\top \mathbf{k} / \tau) + \displaystyle\sum_{\mathbf{n}\in\mathcal{Q}} \exp(\mathbf{q}^\top \mathbf{n} / \tau) + \displaystyle\sum_{\mathbf{s}\in\mathcal{S}} \exp(\mathbf{q}^\top \mathbf{s} / \tau)} \]
+      <p class="eq-note">With no synthetic negatives (\(\mathcal{S}=\emptyset\)), this reduces exactly to the InfoNCE loss used by MoBY and MoCo-v3 for vision transformers. Replacing InfoNCE with a mean-squared error between \(\mathbf{q}\) and \(\mathbf{k}\) instead reduces the framework to BYOL-/DINO-style self-distillation.</p>
+    </div>
+
+    <h3 class="sub-title">Gradient: attraction competes with softmax-weighted repulsion</h3>
+    <p>Why does the hardness of a negative matter at all? Differentiating the loss with respect to the query makes it explicit. Writing \(p(\mathbf{x}) = \exp(\mathbf{q}^\top\mathbf{x}/\tau) / Z\) for the softmax weight assigned to any key or negative \(\mathbf{x}\) under the full denominator \(Z\), the gradient collapses to a single weighted sum:</p>
+    <div class="def-block">
+      <span class="def-label">Query gradient</span>
+      \[ \nabla_{\mathbf{q}} \mathcal{L} = \frac{1}{\tau} \sum_{\mathbf{n} \,\in\, \mathcal{Q}\,\cup\,\mathcal{S}} p(\mathbf{n})\,\big(\mathbf{n} - \mathbf{k}\big) \]
+      <p class="eq-note">Gradient descent moves \(\mathbf{q}\) in the direction \(-\nabla_{\mathbf{q}}\mathcal{L}\): a pull toward \(\mathbf{k}\) (positive attraction) net of a pull toward every negative \(\mathbf{n}\), each weighted by its own softmax probability \(p(\mathbf{n})\) (negative repulsion). Because \(p(\mathbf{n})\) grows with \(\mathbf{q}^\top\mathbf{n}\), negatives close to the query dominate the sum, regardless of how many easy negatives sit in the queue.</p>
+    </div>
+
+    <div class="fig-card card">
+      <img src="assets/09_gradient_softmax.png" alt="Softmax weight versus similarity to the query for queue negatives, synthetic hard negatives, and the positive, showing gradient mass concentrated on the hardest negatives">
+    </div>
+    <p class="fig-caption">Softmax weight \(p(\mathbf{x})\) against similarity to the query, for 230 representative queue negatives and 10 synthetic hard negatives at \(\tau=0.2\). Ordinary queue negatives sit far from the query and contribute almost nothing to the gradient; synthetic hard negatives, placed deliberately close to the decision boundary, receive orders of magnitude more softmax weight and therefore dominate the repulsive term. This is the mechanism behind the "harder task" framing above: synthetic negatives don't just add more terms to the sum, they concentrate the gradient where it is most informative.</p>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <p class="section-label">Results</p>
+    <h2 class="section-title">Stronger features, fewer parameters</h2>
+    <p class="lede">ViTAMINS learns stronger representations than contrastive, self-distillation, generative, and JEPA baselines under matched architectures. The design stays deliberately simple: no multi-crop augmentation (unlike SwAV, DINO, or DINOv2), and none of the extra self-distillation machinery &mdash; centering, sharpening, teacher temperature schedules &mdash; that DINO and DINOv2 rely on. Just a single InfoNCE loss, a momentum target, and better negatives.</p>
+
+    <div class="stat-row">
+      <div class="card stat"><div class="num">77.1%</div><div class="lab">ViT-B/16 linear top-1, 300 epochs, no multi-crop</div></div>
+      <div class="card stat"><div class="num">+11.3%</div><div class="lab">k-NN accuracy over reproduced baselines</div></div>
+      <div class="card stat"><div class="num">7.3&times;</div><div class="lab">fewer parameters than LeJEPA ViT-H at matched accuracy</div></div>
+    </div>
+
+    <p>Our ViT-B reaches 77.1% top-1 in 300 epochs, surpassing V-JEPA with ViT-L and matching LeJEPA with ViT-H at 7.3&times; fewer parameters. Across backbones, ViTAMINS reaches 73.1% / 77.1% linear top-1 with ViT-S/16 and ViT-B/16, and 75.4% / 78.0% with Swin-T and Swin-S.</p>
+
+    <div class="fig-card card">
+      <img src="assets/01_imagenet_linear_vs_flops.png" alt="ImageNet-1K linear top-1 versus inference FLOPs, ViTAMINS versus generative, JEPA and joint-embedding baselines, ViT and Swin backbones">
+    </div>
+    <p class="fig-caption">ViTAMINS reaches the strongest linear accuracy at matched inference cost on both ViT and Swin backbones, matching LeJEPA (ViT-H) and surpassing V-JEPA (ViT-L) at a fraction of the FLOPs.</p>
+
+    <div class="takeaway-box">
+      <div class="tk-label">Key takeaway &middot; 01</div>
+      <p>A plain ViT-B/16 reaches <b>77.1%</b> linear top-1 in 300 epochs with no multi-crop and no self-distillation machinery, matching or beating methods built on far more complex training recipes.</p>
+    </div>
+
+    <h3 class="sub-title">Nearest-neighbour classification</h3>
+    <p class="lede">Because synthetic hard negatives sharpen the discrimination task during pretraining, the resulting features are not just linearly separable, they organize themselves well enough to serve as strong nearest-neighbour classifiers with <i>no training at all</i>.</p>
+
+    <div class="fig-card card">
+      <img src="assets/02_imagenet_knn_vs_flops.png" alt="ImageNet-1K k-NN top-1 versus inference FLOPs, ViTAMINS versus joint-embedding baselines, ViT and Swin backbones">
+    </div>
+    <p class="fig-caption">k-NN top-1 accuracy, 300 epochs, no multi-crop. Synthetic hard negatives lift k-NN accuracy from 62.5 to <b>71.0</b> on ViT-S (+8.5 over BYOL) and from 58.0 to <b>69.3</b> on Swin-T (+11.3 over BYOL), the single largest margin of any comparison in the paper, despite linear top-1 moving by only a couple of points.</p>
+
+    <div class="takeaway-box">
+      <div class="tk-label">Key takeaway &middot; 02 &middot; excellent k-NN classifiers</div>
+      <p>The same features are also strong nearest-neighbour classifiers out of the box: ViTAMINS reaches <b>73.3%</b> k-NN top-1 on ImageNet-1K with a compact ViT-B/16, no classifier head, no extra training.</p>
+    </div>
+
+    <h3 class="sub-title">Attention structure and video segmentation</h3>
+    <p class="lede">We visualize ViT-S/16 self-attention for six examples: the input image, the <code>[CLS]</code>-token attention, and the patch attention produced by ViTAMINS. Without any labels, attention concentrates on the primary object with clear, semantically coherent boundaries. Select an example:</p>
+
+    <div class="unc-nav" id="teaserNav"></div>
+    <div class="unc-display" id="teaserDisplay"></div>
+
+    <div class="fig-card card" style="margin-top:26px;">
+      <img src="assets/03_copydays_and_davis17.png" alt="Copy detection mAP on Copydays and video object segmentation on DAVIS-17, ViTAMINS versus baselines">
+    </div>
+    <p class="fig-caption">Copy detection (Copydays Strong mAP) and zero-shot video object segmentation (DAVIS-17), both with frozen features and no video training at all.</p>
+
+    <div class="takeaway-box">
+      <div class="tk-label">Key takeaway &middot; 03 &middot; emergent properties</div>
+      <p>Self-supervised ViTAMINS features carry explicit information about an image's semantic structure directly in their attention maps, boundaries that do not emerge nearly as cleanly from supervised ViTs or from convolutional networks trained the same way, and that transfer zero-shot to video object segmentation despite no video training at all.</p>
+    </div>
+
+    <h3 class="sub-title">Image retrieval</h3>
+    <div class="fig-card card">
+      <img src="assets/04_revisited_oxford.png" alt="Revisited Oxford image retrieval mAP, Medium and Hard protocols">
+    </div>
+    <p class="fig-caption">Revisited Oxford, Medium and Hard protocols, zero-shot with frozen ViTAMINS features.</p>
+    <div class="fig-card card">
+      <img src="assets/05_revisited_paris.png" alt="Revisited Paris image retrieval mAP, Medium and Hard protocols">
+    </div>
+    <p class="fig-caption">Revisited Paris, Medium and Hard protocols, zero-shot with frozen ViTAMINS features.</p>
+
+    <h3 class="sub-title">Dense prediction</h3>
+    <div class="fig-card card">
+      <img src="assets/06_dense_prediction.png" alt="COCO box AP, COCO mask AP, and ADE20K mIoU, ViTAMINS versus supervised and self-supervised baselines">
+    </div>
+    <p class="fig-caption">Gains carry over to dense prediction: ViTAMINS gives the best object detection and instance segmentation on COCO, and the best semantic segmentation on ADE20K, among all compared models, fine-tuned from frozen pretraining.</p>
+  </div>
+</section>
+
+<section id="conclusion">
+  <div class="wrap">
+    <p class="section-label">Conclusion</p>
+    <h2 class="section-title">High-quality negatives are still a powerful lever</h2>
+    <p>Synthetic hard negatives significantly improve vision transformer representations in self-supervised contrastive learning. Emergent semantic segmentation properties, previously considered exclusive to self-distillation methods like DINO, naturally arise in contrastive learning and are further strengthened through synthetic negative generation. ViTAMINS achieves five improvements over standard contrastive baselines: (i) improved ImageNet linear accuracy, (ii) strong k-NN performance indicating high-quality features, (iii) improved downstream performance across diverse settings, (iv) sharper attention maps with better object boundary alignment, and (v) strong video object segmentation despite no video training. These gains are achieved without DINO's complex procedures (centering, sharpening, multi-crop, extended schedules); under identical regimes (300 epochs, no multi-crop), ViTAMINS outperforms our reproduced DINO across <i>all</i> tasks: linear probing, k-NN, image retrieval, copy detection, video segmentation, and dense prediction.</p>
+
+    <h3 class="sub-title">Takeaway</h3>
+    <p>Contrastive learning with high-quality negatives remains a simple yet powerful alternative that integrates with any InfoNCE-based method, generalizes across architectures, and incurs minimal overhead, inviting renewed interest in contrastive learning as generative and self-distillation approaches dominate the conversation.</p>
+  </div>
+</section>
+
+<section id="bibtex">
+  <div class="wrap">
+    <p class="section-label">Citation</p>
+    <h2 class="section-title">BibTeX</h2>
+    <div class="card bib-card">
+      <button class="copy-btn" id="copyBibBtn">Copy</button>
+      <pre id="bibtexText">@misc{giakoumoglou2026vitamins,
+      title={{ViTAMINS}: An Empirical Study of Training Self-Supervised Vision Transformers with Synthetic Hard Negatives},
+      author={Nikos Giakoumoglou and Andreas Floros and Kleanthis-Marios Papadopoulos and Tania Stathaki},
+      year={2026},
+      eprint={2609.01041},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2609.01041},
+}</pre>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" src="" alt=""></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- section nav active state ---------- */
+  var navLinks = Array.from(document.querySelectorAll('.section-nav a'));
+  var navMap = {};
+  navLinks.forEach(function(a){ navMap[a.getAttribute('href').slice(1)] = a; });
+  var navSections = Object.keys(navMap).map(function(id){ return document.getElementById(id); }).filter(Boolean);
+  if('IntersectionObserver' in window){
+    var navObserver = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          navLinks.forEach(function(a){ a.classList.remove('active'); });
+          var link = navMap[entry.target.id];
+          if(link){ link.classList.add('active'); link.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+        }
+      });
+    }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+    navSections.forEach(function(s){ navObserver.observe(s); });
+  }
+
+  /* ---------- lightbox ---------- */
+  var lb = document.getElementById('lightbox');
+  var lbImg = document.getElementById('lightboxImg');
+  function openLightbox(src, alt){ lbImg.src = src; lbImg.alt = alt || ''; lb.classList.add('open'); }
+  lb.addEventListener('click', function(){ lb.classList.remove('open'); lbImg.src=''; });
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(t.tagName === 'IMG' && t.closest('.unc-display, .method-row')){ openLightbox(t.src, t.alt); }
+  });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ lb.classList.remove('open'); lbImg.src=''; } });
+
+  /* ---------- teaser attention selector ---------- */
+  var teaserNav = document.getElementById('teaserNav');
+  var teaserDisplay = document.getElementById('teaserDisplay');
+  var teaserOrder = [5,1,2,3,4,6];
+  teaserOrder.forEach(function(i, idx){
+    var d = document.createElement('div');
+    d.className = 'unc-thumb' + (idx===0 ? ' active' : '');
+    d.innerHTML = '<img src="assets/teaser/'+i+'/original.png" alt="Example '+i+'">';
+    d.addEventListener('click', function(){
+      document.querySelectorAll('#teaserNav .unc-thumb').forEach(function(el){ el.classList.remove('active'); });
+      d.classList.add('active');
+      renderTeaser(i);
+    });
+    teaserNav.appendChild(d);
+  });
+  function renderTeaser(i){
+    var items = [
+      ['teaser/'+i+'/original.png', 'Image'],
+      ['teaser/'+i+'/cls.png', '[CLS] attention'],
+      ['teaser/'+i+'/patch.png', 'Patch attention']
+    ];
+    teaserDisplay.innerHTML = '';
+    items.forEach(function(it){
+      var fig = document.createElement('figure');
+      var img = document.createElement('img');
+      img.src = 'assets/'+it[0]; img.alt = it[1]; img.loading = 'lazy';
+      var cap = document.createElement('figcaption');
+      cap.textContent = it[1];
+      fig.appendChild(img); fig.appendChild(cap);
+      teaserDisplay.appendChild(fig);
+    });
+  }
+  renderTeaser(5);
+
+  /* ---------- copy bibtex ---------- */
+  var copyBtn = document.getElementById('copyBibBtn');
+  copyBtn.addEventListener('click', function(){
+    var text = document.getElementById('bibtexText').textContent;
+    function done(){ copyBtn.textContent = 'Copied'; copyBtn.classList.add('copied'); setTimeout(function(){ copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){ try{ fallbackCopy(text); done(); }catch(e){} });
+    } else { try{ fallbackCopy(text); done(); }catch(e){} }
+    function fallbackCopy(t){ var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+  });
+
+})();
+</script>
+</body>
+</html>
