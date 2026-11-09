@@ -4,7 +4,7 @@ Official PyTorch implementation of **ViTAMINS**, a self-supervised learning meth
 
 > **ViTAMINS: An Empirical Study of Training Self-Supervised Vision Transformers with Synthetic Hard Negatives**  
 > Nikos Giakoumoglou, Andreas Floros, Kleanthis-Marios Papadopoulos, Tania Stathaki — **WACV 2027**  
-> [Paper](https://arxiv.org/pdf/2609.01041)
+> [Paper](https://arxiv.org/pdf/2609.01041) [Website](https://giakoumoglou.github.io/vitamins/) | [Code](https://github.com/giakoumoglou/vitamins)
 ---
 
 ## Overview
