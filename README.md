@@ -19,13 +19,6 @@ ViTAMINS consistently learns stronger representations than contrastive, self-dis
   <img src="docs/assets/01_imagenet_linear_vs_flops.png" alt="ImageNet linear top-1 vs inference FLOPs, ViT and Swin backbones" width="1100">
 </p>
 
-The gains carry over to the more challenging dense prediction task. ViTAMINS achieves the best object detection and instance segmentation results on COCO and the best semantic segmentation on ADE20K among all compared models.
-
-<p align="center">
-  <img src="docs/assets/06_dense_prediction.png" alt="COCO Box AP, COCO Mask AP, and ADE20K mIoU" width="1100">
-</p>
-
-
 ## Visualization
 
 We visualize the learned patch representations using PCA on ViTAMINS encoder features. Without any labels, the features recover coherent object and background structures with clear object boundaries, suggesting that synthetic hard negatives encourage semantically structured representations.
